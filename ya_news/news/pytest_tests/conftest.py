@@ -8,10 +8,16 @@ from django.utils import timezone
 from news.forms import BAD_WORDS
 from news.models import Comment, News
 
+USERNAME = 'Автор'
+TITLE = 'Заголовок'
+TEXT = 'Текст'
+TEXT_COMMENT = 'Текст комментария'
+NEW_COMMENT_TEXT = 'Новый текст комментария'
+
 
 @pytest.fixture
 def author(django_user_model):
-    return django_user_model.objects.create(username='Автор')
+    return django_user_model.objects.create(username=USERNAME)
 
 
 @pytest.fixture
@@ -22,7 +28,7 @@ def author_client(author, client):
 
 @pytest.fixture
 def news():
-    news = News.objects.create(title='Заголовок', text='Текст')
+    news = News.objects.create(title=TITLE, text=TEXT)
     return news
 
 
@@ -31,7 +37,7 @@ def comment(news, author):
     comment = Comment.objects.create(
         news=news,
         author=author,
-        text='Текст комментария'
+        text=TEXT_COMMENT
     )
     return comment
 
@@ -57,7 +63,7 @@ def all_news(today):
     all_news = [
         News(
             title=f'Новость {index}',
-            text='Просто текст.',
+            text=TEXT,
             date=today - timedelta(days=index)
         )
         for index in range(settings.NEWS_COUNT_ON_HOME_PAGE + 1)
@@ -79,7 +85,7 @@ def comments(news, author):
 @pytest.fixture
 def comment_form_data():
     return {
-        'text': 'Текст комментария',
+        'text': NEW_COMMENT_TEXT,
     }
 
 

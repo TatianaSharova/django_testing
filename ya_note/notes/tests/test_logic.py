@@ -1,23 +1,25 @@
-from django.contrib.auth import get_user_model
+from http import HTTPStatus
+
 from django.test import Client, TestCase
 from django.urls import reverse
 from pytils.translit import slugify
 
 from notes.forms import WARNING
-from notes.models import Note
+from notes.models import Note, User
 
-User = get_user_model()
 
 TEXT = 'Первоначальный текст'
 TITLE = 'Заголовок'
 SLUG = 'slug'
+AUTHOR = 'Автор'
+USER = 'Пользователь'
 
 
 class TestNoteCreation(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create(username='Пользователь')
+        cls.user = User.objects.create(username=USER)
         cls.user_client = Client()
         cls.user_client.force_login(cls.user)
         cls.add_url = reverse('notes:add')
@@ -41,11 +43,10 @@ class TestNoteCreation(TestCase):
         self.assertRedirects(response, self.done_url)
         notes_count = Note.objects.count()
         self.assertEqual(notes_count, 1)
-        note = Note.objects.get()
-        self.assertEqual(note.text, TEXT)
-        self.assertEqual(note.title, TITLE)
-        self.assertEqual(note.slug, SLUG)
-        self.assertEqual(note.author, self.user)
+        note = Note.objects.get(
+            text=TEXT, title=TITLE, slug=SLUG, author=self.user
+        )
+        self.assertEqual(note, Note.objects.get())
 
     def test_empty_slug(self):
         url = reverse('notes:add')
@@ -65,9 +66,12 @@ class TestNoteEditDelete(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.author = User.objects.create(username='Автор')
+        cls.author = User.objects.create(username=AUTHOR)
         cls.author_client = Client()
         cls.author_client.force_login(cls.author)
+        cls.user = User.objects.create(username='Пользователь')
+        cls.user_client = Client()
+        cls.user_client.force_login(cls.user)
         cls.note = Note.objects.create(
             title=TITLE,
             text=TEXT,
@@ -86,34 +90,36 @@ class TestNoteEditDelete(TestCase):
         }
 
     def test_author_can_delete_note(self):
+        """Пользователь может удалять свои заметки."""
         response = self.author_client.delete(self.delete_url)
         self.assertRedirects(response, self.done_url)
         notes_count = Note.objects.count()
         self.assertEqual(notes_count, 0)
 
-    def test_anonymus_cant_delete_note(self):
-        login_url = reverse('users:login')
-        response = self.client.delete(self.delete_url)
-        redirect_url = f'{login_url}?next={self.delete_url}'
-        self.assertRedirects(response, redirect_url)
+    def test_other_user_cant_delete_note(self):
+        """Пользователь не может удалять чужие заметки."""
         notes_count = Note.objects.count()
-        self.assertEqual(notes_count, 1)
+        response = self.user_client.delete(self.delete_url)
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        notes_count_after = Note.objects.count()
+        self.assertEqual(notes_count, notes_count_after)
 
     def test_author_can_edit_note(self):
+        """Пользователь может редактировать свои заметки."""
         response = self.author_client.post(self.edit_url, data=self.form_data)
         self.assertRedirects(response, self.done_url)
         self.note.refresh_from_db()
         self.assertEqual(self.note.text, self.NEW_TEXT)
 
-    def test_anonymus_cant_edit_note(self):
-        login_url = reverse('users:login')
-        response = self.client.post(self.edit_url, data=self.form_data)
-        redirect_url = f'{login_url}?next={self.edit_url}'
-        self.assertRedirects(response, redirect_url)
+    def test_other_user_cant_edit_note(self):
+        """Пользователь не может редактировать чужие заметки."""
+        response = self.user_client.post(self.edit_url, data=self.form_data)
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         self.note.refresh_from_db()
         self.assertEqual(self.note.text, TEXT)
 
     def test_user_cant_use_used_slug(self):
+        """Невозможно создать две заметки с одинаковым slug."""
         response = self.author_client.post(self.add_url, data=self.form_data)
         self.assertFormError(
             response,
