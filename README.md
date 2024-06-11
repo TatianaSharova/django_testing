@@ -6,11 +6,11 @@ Django testing - это проект по тестировке двух серв
 
 ## Чтобы развернуть проект на своем компьютере:
 
-1. Склонируйте репозиторий 
+**_1. Склонируйте репозиторий:_**
 ```
 git@github.com:TatianaSharova/django_testing.git
 ```
-2. Создайте и активируйте виртуальное окружение:
+**_2. Создайте и активируйте виртуальное окружение:_**
 
 Для Linux/macOS:
 ```
@@ -26,18 +26,18 @@ python -m venv venv
 ```
 source venv/Scripts/activate
 ```
-3. Установить зависимости из файла requirements.txt:
+**_3. Установить зависимости из файла requirements.txt:_**
 ```
 pip install -r requirements.txt
 ```
-4. В директории ya_news выполните миграции и заполните бд:
+**_4. В директории ya_news выполните миграции и заполните бд:_**
 ```
 python manage.py migrate
 ```
 ```
 python manage.py loaddata news.json
 ```
-5. Запустите сервис из директории ya_news:
+**_5. Запустите сервис из директории ya_news:_**
 ```
 python manage.py runserver
 ```
